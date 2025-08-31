@@ -230,7 +230,7 @@ src/
 LICENSE
 ```
 
-- For deeper docs, see **`src/schema/README.md`**.
+- For deeper docs, see <a href="https://github.com/KumJungMin/tiny-ts-mapper/tree/main/src/schema">`src/schema/README.md`</a>
 
 <br/>
 
