@@ -41,7 +41,7 @@ export class UserMapper {
       default:
         return err(
           new ValidationError([
-            { path: ['role'], code: 'invalid_enum', message: `Unknown role: ${r}` },
+            { path: ['role'], code: 'invalid_enum', message: `Unknown role: ${role}` },
           ])
         );
     }
