@@ -1,7 +1,7 @@
-import { StringSchema } from './primitives';
-import { NumberSchema } from './primitives';
-import { BooleanSchema } from './primitives';
-import { EnumSchema } from './primitives';
+import { StringSchema } from './primitives/StringSchema';
+import { NumberSchema } from './primitives/NumberSchema';
+import { BooleanSchema } from './primitives/BooleanSchema';
+import { EnumSchema } from './primitives/EnumSchema';
 import { BaseSchema } from './base/BaseSchema';
 import { ArraySchema } from './complex/ArraySchema';
 import { ObjectSchema } from './complex/ObjectSchema';
