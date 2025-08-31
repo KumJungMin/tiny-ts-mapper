@@ -1,4 +1,4 @@
-import { BaseSchema } from '../BaseSchema';
+import { BaseSchema } from '../base/BaseSchema';
 import type { Path } from '../core/type';
 import { MaybePromise } from '../core/utils';
 
