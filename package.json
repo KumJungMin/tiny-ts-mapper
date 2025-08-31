@@ -1,22 +1,25 @@
 {
   "name": "tiny-ts-mapper",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "version": "0.1.0",
+  "description": "Ultra-light TS toolkit for safe DTO↔Domain mapping (schemas, codecs, safeParse/Encode/Decode).",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.14.0",
-  "devDependencies": {
-    "@types/node": "^24.3.0",
-    "eslint": "^9.34.0",
-    "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.6.2",
-    "tsup": "^8.5.0",
-    "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "format": "prettier -w \"src/**/*.{ts,tsx}\""
   }
 }
