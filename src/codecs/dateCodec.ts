@@ -1,5 +1,5 @@
-import { Result, ok, err } from '../ shared/schema/core/result';
-import { ValidationError } from '../ shared/schema/core/error';
+import { Result, ok, err } from '../shared/schema/core/result';
+import { ValidationError } from '../shared/schema/core/error';
 
 export const DateCodec = {
   encode(d: Date): Result<string, ValidationError> {
