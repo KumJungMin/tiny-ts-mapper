@@ -262,8 +262,8 @@ A. DTO에서 `null` 혹은 `undefined`를 허용하더라도 도메인에서는 
 
 <br/>
 
-Q. `nullable().optional()` 순서 중요해요?  
-A. 결과 타입은 비슷하지만 권장 패턴은 `nullable().optional()`입니다: “값이 없거나(null) 유효”를 허용합니다.
+Q. `nullable().optional()` 순서가 중요해요?  
+A. 결과 타입은 비슷하지만 권장 패턴은 `nullable().optional()`입니다. “값이 없거나(null) 유효”를 허용합니다.
 
 <br/>
 
