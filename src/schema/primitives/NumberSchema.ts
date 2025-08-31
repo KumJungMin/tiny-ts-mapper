@@ -35,5 +35,4 @@ export class NumberSchema extends BaseSchema<number> {
   int = () => new NumberSchema({ ...this.config, int: true });
   min = (n: number) => new NumberSchema({ ...this.config, min: n });
   max = (n: number) => new NumberSchema({ ...this.config, max: n });
-  nullable = () => new (require('../base/NullableSchema').NullableSchema)(this);
 }

@@ -63,4 +63,22 @@ export abstract class BaseSchema<T> {
       return this._makeSafeResultError(e);
     }
   }
+
+  optional(): BaseSchema<T | undefined> {
+    const parent = this;
+    return new (class extends BaseSchema<T | undefined> {
+      protected _parse(v: unknown, path: Path): MaybePromise<T | undefined> {
+        return v === undefined ? undefined : (parent as any)._parse(v, path);
+      }
+    })();
+  }
+
+  nullable(): BaseSchema<T | null> {
+    const parent = this;
+    return new (class extends BaseSchema<T | null> {
+      protected _parse(v: unknown, path: Path): MaybePromise<T | null> {
+        return v === null ? null : (parent as any)._parse(v, path);
+      }
+    })();
+  }
 }
