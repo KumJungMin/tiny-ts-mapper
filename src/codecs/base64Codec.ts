@@ -1,5 +1,5 @@
-import { Result, ok, err } from '../shared/schema/core/result';
-import { ValidationError } from '../shared/schema/core/error';
+import { Result, ok, err } from '../schema/core/result';
+import { ValidationError } from '../schema/core/error';
 
 const ve = (msg: string) => err(new ValidationError([{ path: [], code: 'custom', message: msg }]));
 
