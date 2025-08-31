@@ -33,7 +33,12 @@ export class StringSchema extends BaseSchema<string> {
   }
 
   min = (n: number) => new StringSchema({ ...this.config, min: n });
+
   max = (n: number) => new StringSchema({ ...this.config, max: n });
+
   regex = (r: RegExp) => new StringSchema({ ...this.config, re: r });
+
   email = () => this.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+
+  nullable = () => new (require('../base/NullableSchema').NullableSchema)(this);
 }
