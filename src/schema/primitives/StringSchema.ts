@@ -6,10 +6,10 @@ type StringConfig = Readonly<{ min?: number; max?: number; re?: RegExp }>;
 
 /**
  * StringSchema
- * - 입력값이 string인지 검증하는 스키마.
- * - min(n), max(n) 체이너로 길이를 제한할 수 있다.
- * - regex(r) 체이너로 정규식 패턴을 지정할 수 있다.
- * - email() 체이너로 이메일 형식을 검증할 수 있다.
+ * - Schema that validates if the input is a string.
+ * - min(n), max(n) chain: restricts the length.
+ * - regex(r) chain: applies a regular expression pattern.
+ * - email() chain: validates email format.
  */
 export class StringSchema extends BaseSchema<string> {
   constructor(private readonly config: StringConfig = {}) {
@@ -37,13 +37,13 @@ export class StringSchema extends BaseSchema<string> {
     return input;
   }
 
-  // 체이닝
+  // Chaining methods
   min = (n: number) => new StringSchema({ ...this.config, min: n });
   max = (n: number) => new StringSchema({ ...this.config, max: n });
   regex = (r: RegExp) => new StringSchema({ ...this.config, re: r });
   email = () => this.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
 
-  // 헬퍼
+  // Helper
   private _fail(
     path: Path,
     code: 'invalid_type' | 'too_small' | 'too_big' | 'invalid_string',

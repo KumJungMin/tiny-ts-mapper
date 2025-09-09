@@ -6,18 +6,18 @@ type NumberConfig = Readonly<{ int?: boolean; min?: number; max?: number }>;
 
 /**
  * NumberSchema
- * - 입력값이 number인지 검증하는 스키마.
- * - int() 체이너로 정수만 허용할 수 있다.
- * - min(n), max(n) 체이너로 범위를 제한할 수 있다.
- * - 단, NaN은 허용하지 않지만 Infinity, -Infinity는 허용한다.
- * */
+ * - Schema that validates if the input is a number.
+ * - int() chain: allows only integers.
+ * - min(n), max(n) chains: restrict the range.
+ * - NaN is not allowed, but Infinity and -Infinity are allowed.
+ */
 export class NumberSchema extends BaseSchema<number> {
   constructor(private readonly config: NumberConfig = {}) {
     super();
   }
 
   protected override _parse(input: unknown, path: Path): number {
-    // NaN도 걸러내기
+    // Reject NaN as well
     if (typeof input !== 'number' || Number.isNaN(input)) {
       this._fail(path, 'invalid_type', 'Expected number');
     }
@@ -37,12 +37,12 @@ export class NumberSchema extends BaseSchema<number> {
     return input;
   }
 
-  // ── 체이닝 ───────────────────────────────────────────────────────────────
+  // ── Chaining methods ───────────────────────────────────────────────────────────────
   int = () => new NumberSchema({ ...this.config, int: true });
   min = (n: number) => new NumberSchema({ ...this.config, min: n });
   max = (n: number) => new NumberSchema({ ...this.config, max: n });
 
-  // ── 헬퍼 ────────────────────────────────────────────────────────────────
+  // ── Helper ────────────────────────────────────────────────────────────────
   private _fail(
     path: Path,
     code: 'invalid_type' | 'too_small' | 'too_big',

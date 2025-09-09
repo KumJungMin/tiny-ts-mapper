@@ -4,8 +4,8 @@ import { MaybePromise } from '../core/utils';
 
 /**
  * NullableSchema<T>
- * - 입력값이 null이면 그대로 통과하고,
- * - 그 외에는 inner 스키마로 검증한다.
+ * - Passes through if the input is null,
+ * - Otherwise, validates with the inner schema.
  */
 export class NullableSchema<T> extends BaseSchema<T | null> {
   constructor(private readonly inner: BaseSchema<T>) {

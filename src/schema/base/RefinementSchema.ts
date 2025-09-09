@@ -7,8 +7,8 @@ type Predicate<T> = (value: T) => MaybePromise<boolean | void>;
 
 /**
  * RefinementSchema<T>
- * - inner 스키마로 파싱된 값에 대해 추가 조건을 검사한다.
- * - 조건이 truthy가 아니면 ValidationError를 던진다.
+ * - Checks additional conditions on the value parsed by the inner schema.
+ * - Throws ValidationError if the condition is not truthy.
  */
 export class RefinementSchema<T> extends BaseSchema<T> {
   constructor(
@@ -27,13 +27,13 @@ export class RefinementSchema<T> extends BaseSchema<T> {
       : this._checkPredicateOrThrow(parsed, path);
   }
 
-  /** predicate 결과가 truthy가 아니면 에러를 던지고, 통과하면 원래 값을 반환한다. */
+  /** Throws an error if the predicate result is not truthy, otherwise returns the original value. */
   private _checkPredicateOrThrow(value: T, path: Path): MaybePromise<T> {
     const result = this.predicate(value);
 
     const onResolved = (ok: boolean | void): T => {
       if (ok)
-        return value; // truthy만 통과 (void/false는 실패)
+        return value; // Only truthy passes (void/false fails)
       else {
         const message = this.message ?? 'Refinement failed';
         throw new ValidationError([{ path, code: 'custom', message }]);

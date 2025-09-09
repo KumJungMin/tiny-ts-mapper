@@ -4,7 +4,7 @@ import { ValidationError } from '../core/error';
 
 /**
  * EnumSchema
- * - 입력값이 enum 값 중 하나인지 검증하는 스키마.
+ * - Schema that validates if the input is one of the allowed enum values.
  **/
 
 export class EnumSchema<T extends string> extends BaseSchema<T> {

@@ -4,11 +4,11 @@ import { ValidationError } from '../core/error';
 
 /**
  * BooleanSchema
- * - 입력값이 boolean인지 검증하는 스키마.
+ * - Schema that validates if the input is a boolean.
  */
 
 export class BooleanSchema extends BaseSchema<boolean> {
-  /** 입력값이 boolean인지 검증하고, 아니면 ValidationError를 던진다. */
+  /** Validates if the input is a boolean, throws ValidationError if not. */
   protected override _parse(input: unknown, path: Path): boolean {
     if (typeof input === 'boolean') return input;
 

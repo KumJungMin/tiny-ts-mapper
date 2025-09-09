@@ -7,20 +7,20 @@ type TransformFn<In, Out> = (v: In) => MaybePromise<Out>;
 
 /**
  * TransformSchema<In, Out>
- * - inner로 검증한 뒤, 결과값에 변환 함수를 적용한다.
- * - 변환 함수 에러(동기/비동기)는 모두 ValidationError로 변환된다.
+ * - Validates the input with the inner schema, then applies a transform function to the result.
+ * - Any error thrown by the transform function (sync/async) is wrapped as a ValidationError.
  */
 
 /** TransformSchema vs RefinementSchema
  * transform
- * - 입력값을 내부 스키마로 검증한 뒤, 변환 함수로 값을 다른 형태로 변환합니다.
- * - 예시: 문자열을 숫자로 변환, DTO를 도메인 객체로 변환 등
- * - 반환값이 원래 타입과 달라도 됨.
+ * - Validates the input with the inner schema, then transforms the value to a different shape.
+ * - Example: Convert string to number, map DTO to domain object, etc.
+ * - The return type can be different from the input type.
  *
  * refinement
- * - 내부 스키마로 검증한 값을 추가 조건으로 검사합니다.
- * - 값의 형태는 그대로 유지하며, 조건을 만족하지 않으면 에러를 발생시킵니다.
- * - 예시: 숫자가 양수인지, 문자열이 특정 패턴에 맞는지 등
+ * - Validates the input with the inner schema, then checks additional conditions.
+ * - The value shape remains the same; throws an error if the condition is not met.
+ * - Example: Check if a number is positive, if a string matches a pattern, etc.
  */
 export class TransformSchema<In, Out> extends BaseSchema<Out> {
   constructor(
@@ -38,7 +38,7 @@ export class TransformSchema<In, Out> extends BaseSchema<Out> {
       : this._applyTransformOrThrow(parsed, path);
   }
 
-  /** 변환 함수를 적용하고, 실패 시 ValidationError로 감싼다. */
+  /** Applies the transform function and wraps any error as ValidationError. */
   private _applyTransformOrThrow(value: In, path: Path): MaybePromise<Out> {
     try {
       const result = this.fn(value);
@@ -54,7 +54,7 @@ export class TransformSchema<In, Out> extends BaseSchema<Out> {
     }
   }
 
-  /** 변환 함수에서 발생한 에러를 ValidationError로 변환 */
+  /** Converts any error from the transform function to a ValidationError. */
   private _asTransformError(e: unknown, path: Path): ValidationError {
     const message = (e as Error)?.message ?? String(e);
 

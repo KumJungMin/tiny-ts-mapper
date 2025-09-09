@@ -6,8 +6,8 @@ type DefaultSource<T> = T | (() => MaybePromise<T>);
 
 /**
  * DefaultSchema<T>
- * - 입력값이 undefined일 때 기본값을 적용하고, 그 값을 inner 스키마로 검증한다.
- * - 입력값이 정의되어 있으면 그대로 inner 스키마로 검증한다.
+ * - Applies the default value when the input is undefined, then validates that value with the inner schema.
+ * - If the input is defined, validates it directly with the inner schema.
  */
 export class DefaultSchema<T> extends BaseSchema<T> {
   constructor(
@@ -18,19 +18,19 @@ export class DefaultSchema<T> extends BaseSchema<T> {
   }
 
   protected _parse(input: unknown, path: Path): MaybePromise<T> {
-    // 값이 정의되어 있으면 기본값 없이 바로 검증
+    // If the value is defined, validate directly without applying the default
     if (input !== undefined) {
       return this._callInnerParse(this.inner, input, path);
     }
 
-    // undefined 인 경우: 기본값을 해석한 뒤 검증
+    // If undefined: resolve the default value then validate
     const resolved = this.resolveDefault();
     return isPromise(resolved)
       ? resolved.then((v) => this._callInnerParse(this.inner, v, path))
       : this._callInnerParse(this.inner, resolved, path);
   }
 
-  /** defaultSource가 값/함수 어느 쪽이든 실제 기본값을 반환 */
+  /** Returns the actual default value whether defaultSource is a value or a function */
   private resolveDefault(): MaybePromise<T> {
     return typeof this.defaultSource === 'function'
       ? (this.defaultSource as () => MaybePromise<T>)()

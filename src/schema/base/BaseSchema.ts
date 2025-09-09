@@ -4,8 +4,8 @@ import { MaybePromise, isPromise } from '../core/utils';
 
 /**
  * SafeParseResult<T>
- * - 파싱 성공: { success: true, data: T }
- * - 파싱 실패: { success: false, error: ValidationError }
+ * - Parsing success: { success: true, data: T }
+ * - Parsing failure: { success: false, error: ValidationError }
  */
 export type SafeParseResult<T> =
   | { success: true; data: T }
@@ -13,22 +13,22 @@ export type SafeParseResult<T> =
 
 /**
  * BaseSchema<T>
- * - 모든 스키마의 추상 기반 클래스
- * - 실제 파싱 로직은 서브클래스에서 구현
+ * - Abstract base class for all schemas.
+ * - Actual parsing logic is implemented in subclasses.
  */
 export abstract class BaseSchema<T> {
-  readonly _type!: T; // 타입 추론용
+  readonly _type!: T; // For type inference
 
   /**
-   * 실제 파싱 로직 (서브클래스가 구현)
-   * @param value 입력값
-   * @param path 에러 추적용 경로
+   * Actual parsing logic (implemented by subclasses)
+   * @param value Input value
+   * @param path Error tracking path
    */
   protected abstract _parse(value: unknown, path: Path): MaybePromise<T>;
 
   /**
-   * 동기 SafeParse
-   * - 에러 발생 시 실패 결과 반환
+   * Synchronous safeParse
+   * - Returns failure result if an error occurs
    */
   safeParse(value: unknown): SafeParseResult<T> {
     try {
@@ -39,8 +39,8 @@ export abstract class BaseSchema<T> {
   }
 
   /**
-   * 동기 파싱
-   * - thenable(비동기) 결과면 AsyncParseError 발생
+   * Synchronous parse
+   * - Throws AsyncParseError if result is a Promise
    */
   parse(value: unknown): T {
     const result = this._parse(value, []);
@@ -49,8 +49,8 @@ export abstract class BaseSchema<T> {
   }
 
   /**
-   * 비동기 SafeParse
-   * - 에러 발생 시 실패 결과 반환
+   * Asynchronous safeParse
+   * - Returns failure result if an error occurs
    */
   async safeParseAsync(value: unknown): Promise<SafeParseResult<T>> {
     try {
@@ -61,16 +61,16 @@ export abstract class BaseSchema<T> {
   }
 
   /**
-   * 비동기 파싱
-   * - Promise 또는 값 반환
+   * Asynchronous parse
+   * - Returns Promise or value
    */
   async parseAsync(value: unknown): Promise<T> {
-    return this._parse(value, []); // T 또는 Promise<T>
+    return this._parse(value, []); // T or Promise<T>
   }
 
   /**
-   * SafeParse 에러 결과 생성
-   * - ValidationError가 아니면 강제로 변환
+   * Creates a SafeParse error result
+   * - Converts to ValidationError if not already
    */
   private _makeSafeResultError(e: unknown): { success: false; error: ValidationError } {
     const isValidationError = (x: unknown): x is ValidationError => x instanceof ValidationError;
@@ -87,32 +87,32 @@ export abstract class BaseSchema<T> {
   }
 
   /**
-   * undefined 허용 스키마 반환
-   * - OptionalSchema로 감싸서 undefined도 허용
+   * Returns a schema that allows undefined
+   * - Wraps with OptionalSchema
    */
   optional(): BaseSchema<T | undefined> {
     return new OptionalSchema(this);
   }
 
   /**
-   * null 허용 스키마 반환
-   * - NullableSchema로 감싸서 null도 허용
+   * Returns a schema that allows null
+   * - Wraps with NullableSchema
    */
   nullable(): BaseSchema<T | null> {
     return new NullableSchema(this);
   }
 
   /**
-   * null | undefined 허용 스키마 반환
-   * - NullishSchema로 감싸서 null 또는 undefined 허용
+   * Returns a schema that allows null or undefined
+   * - Wraps with NullishSchema
    */
   nullish(): BaseSchema<T | null | undefined> {
     return new NullishSchema(this);
   }
 
   /**
-   * 내부 스키마 파싱 호출
-   * - 재귀적 파싱에 사용
+   * Calls inner schema's parse
+   * - Used for recursive parsing
    */
   protected _callInnerParse<U>(schema: BaseSchema<U>, value: unknown, path: Path): MaybePromise<U> {
     return schema._parse(value, path);
@@ -121,7 +121,7 @@ export abstract class BaseSchema<T> {
 
 /**
  * OptionalSchema<T>
- * - undefined 값을 허용하는 스키마
+ * - Schema that allows undefined values
  */
 class OptionalSchema<T> extends BaseSchema<T | undefined> {
   constructor(private readonly inner: BaseSchema<T>) {
@@ -136,7 +136,7 @@ class OptionalSchema<T> extends BaseSchema<T | undefined> {
 
 /**
  * NullableSchema<T>
- * - null 값을 허용하는 스키마
+ * - Schema that allows null values
  */
 class NullableSchema<T> extends BaseSchema<T | null> {
   constructor(private readonly inner: BaseSchema<T>) {
@@ -151,7 +151,7 @@ class NullableSchema<T> extends BaseSchema<T | null> {
 
 /**
  * NullishSchema<T>
- * - null 또는 undefined 값을 허용하는 스키마
+ * - Schema that allows null or undefined values
  */
 class NullishSchema<T> extends BaseSchema<T | null | undefined> {
   constructor(private readonly inner: BaseSchema<T>) {

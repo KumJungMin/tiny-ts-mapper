@@ -10,13 +10,13 @@ type ObjectConfig = { passthrough?: boolean; strict?: boolean };
 
 /**
  * ObjectSchema<S>
- * - shape에 정의된 각 필드를 검증한다.
- * - 기본적으로 정의된 필드만 허용
+ * - Validates each field defined in the shape.
+ * - By default, only defined fields are allowed.
  *
- * - passthrough() 체이너로 나머지 필드도 허용할 수 있다.
- * - strict() 체이너로 정의되지 않은 필드를 에러로 만들 수도 있다.
- * - partial() 체이너로 모든 필드를 optional로 전환할 수 있다.
- * */
+ * - passthrough(): Allows additional fields not defined in the shape.
+ * - strict(): Throws an error for any fields not defined in the shape.
+ * - partial(): Makes all fields optional.
+ */
 export class ObjectSchema<S extends Shape> extends BaseSchema<OutputOf<S>> {
   constructor(
     private readonly shape: S,
@@ -26,7 +26,7 @@ export class ObjectSchema<S extends Shape> extends BaseSchema<OutputOf<S>> {
   }
 
   protected _parse(input: unknown, path: Path): MaybePromise<OutputOf<S>> {
-    // 1) 객체 형태 확인
+    // 1) Check if input is a plain object
     const isObject = typeof input === 'object' && input !== null && !Array.isArray(input);
     if (!isObject) {
       throw new ValidationError([{ path, code: 'invalid_object', message: 'Expected object' }]);
@@ -35,11 +35,11 @@ export class ObjectSchema<S extends Shape> extends BaseSchema<OutputOf<S>> {
     const record = input as Record<string, unknown>;
     const aggregate = new ValidationError();
 
-    // 1) shapeKeys(검증할 키 목록)과 remainingKeys(나중에 passthrough용) 준비
+    // 1) Prepare shapeKeys (keys to validate) and remainingKeys (for passthrough)
     const shapeKeys = Object.keys(this.shape);
     const remainingKeys = new Set(Object.keys(record));
 
-    // 2) strict: 정의되지 않은 키 수집 - strict 모드라면 정의되지 않은 키는 에러
+    // 2) strict: Collect keys not defined in shape - throw error if strict mode
     if (this.config.strict) {
       for (const key of remainingKeys) {
         const isDefined = key in this.shape;
@@ -54,7 +54,7 @@ export class ObjectSchema<S extends Shape> extends BaseSchema<OutputOf<S>> {
       }
     }
 
-    // 3) 각 필드 파싱 (에러는 모으고, 실패 필드는 SENTINEL 마킹)
+    // 3) Parse each field (collect errors, mark failed fields with SENTINEL)
     type Pair = [string, MaybePromise<any | typeof ERROR_SENTINEL>];
 
     const parseField = (key: string): Pair => {
@@ -73,11 +73,11 @@ export class ObjectSchema<S extends Shape> extends BaseSchema<OutputOf<S>> {
       }
     };
 
-    // pairs(shapeKeys에 대한 [키, 파싱결과] 쌍 목록), hasAsync(비동기 여부)
+    // pairs: list of [key, parse result] for shapeKeys, hasAsync: whether any are async
     const pairs: Pair[] = shapeKeys.map(parseField);
     const hasAsync = pairs.some(([, v]) => isPromise(v));
 
-    // 4) 결과 조립: 에러 있으면 throw, 아니면 SENTINEL 제거 후 객체 반환
+    // 4) Build output: throw if errors, otherwise remove SENTINEL and return object
     const buildOutput = (resolved: [string, any][]): OutputOf<S> => {
       if (aggregate.hasIssues) throw aggregate;
 
@@ -87,7 +87,7 @@ export class ObjectSchema<S extends Shape> extends BaseSchema<OutputOf<S>> {
         if (v !== ERROR_SENTINEL) output[k] = v;
       }
 
-      // passthrough 모드: 허용되지 않은 나머지 필드도 채우기
+      // passthrough mode: add remaining fields not defined in shape
       if (this.config.passthrough) {
         for (const k of remainingKeys) output[k] = record[k];
       }
@@ -96,7 +96,7 @@ export class ObjectSchema<S extends Shape> extends BaseSchema<OutputOf<S>> {
     };
 
     if (hasAsync) {
-      // Promise가 섞여 있으면 모두 resolve 후 조립
+      // If any results are async, resolve all before building output
       return Promise.all(pairs.map(async ([k, v]) => [k, await v] as [string, any])).then(
         buildOutput
       );
@@ -105,15 +105,15 @@ export class ObjectSchema<S extends Shape> extends BaseSchema<OutputOf<S>> {
     }
   }
 
-  // ── 옵션 체이너들 ────────────────────────────────────────────────────────────────
+  // ── Option chainers ────────────────────────────────────────────────────────────────
   passthrough = () => new ObjectSchema(this.shape, { ...this.config, passthrough: true });
 
   strict = () => new ObjectSchema(this.shape, { ...this.config, strict: true });
 
   /**
-   * 모든 필드를 optional로 전환
-   * - 스키마가 optional() 체이너를 노출하면 그것을 사용
-   * - 아니면 OptionalSchema 래퍼로 감싼다
+   * Makes all fields optional.
+   * - If the schema exposes an optional() method, use it.
+   * - Otherwise, wrap with OptionalSchema.
    */
   partial = (): ObjectSchema<{ [K in keyof S]: BaseSchema<S[K]['_type']> }> => {
     const next: Record<string, BaseSchema<any>> = {};
