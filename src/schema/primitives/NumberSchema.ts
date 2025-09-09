@@ -2,37 +2,52 @@ import { BaseSchema } from '../base/BaseSchema';
 import type { Path } from '../core/type';
 import { ValidationError } from '../core/error';
 
-type NumberConfig = { int?: boolean; min?: number; max?: number };
+type NumberConfig = Readonly<{ int?: boolean; min?: number; max?: number }>;
 
+/**
+ * NumberSchema
+ * - 입력값이 number인지 검증하는 스키마.
+ * - int() 체이너로 정수만 허용할 수 있다.
+ * - min(n), max(n) 체이너로 범위를 제한할 수 있다.
+ * - 단, NaN은 허용하지 않지만 Infinity, -Infinity는 허용한다.
+ * */
 export class NumberSchema extends BaseSchema<number> {
   constructor(private readonly config: NumberConfig = {}) {
     super();
   }
-  protected _parse(v: unknown, path: Path): number {
-    const isNotNumber = typeof v !== 'number' || Number.isNaN(v);
-    if (isNotNumber) {
-      throw new ValidationError([{ path, code: 'invalid_type', message: `Expected number` }]);
+
+  protected override _parse(input: unknown, path: Path): number {
+    // NaN도 걸러내기
+    if (typeof input !== 'number' || Number.isNaN(input)) {
+      this._fail(path, 'invalid_type', 'Expected number');
     }
-    const isInvalidInteger = this.config.int && !Number.isInteger(v);
-    if (isInvalidInteger) {
-      throw new ValidationError([{ path, code: 'invalid_type', message: `Expected integer` }]);
+
+    const { int, min, max } = this.config;
+
+    if (int && !Number.isInteger(input)) {
+      this._fail(path, 'invalid_type', 'Expected integer');
     }
-    const isTooSmall = this.config.min != null && v < this.config.min;
-    if (isTooSmall) {
-      throw new ValidationError([
-        { path, code: 'too_small', message: `Min value ${this.config.min}` },
-      ]);
+    if (min != null && input < min) {
+      this._fail(path, 'too_small', `Min value ${min}`);
     }
-    const isTooBig = this.config.max != null && v > this.config.max;
-    if (isTooBig) {
-      throw new ValidationError([
-        { path, code: 'too_big', message: `Max value ${this.config.max}` },
-      ]);
+    if (max != null && input > max) {
+      this._fail(path, 'too_big', `Max value ${max}`);
     }
-    return v;
+
+    return input;
   }
 
+  // ── 체이닝 ───────────────────────────────────────────────────────────────
   int = () => new NumberSchema({ ...this.config, int: true });
   min = (n: number) => new NumberSchema({ ...this.config, min: n });
   max = (n: number) => new NumberSchema({ ...this.config, max: n });
+
+  // ── 헬퍼 ────────────────────────────────────────────────────────────────
+  private _fail(
+    path: Path,
+    code: 'invalid_type' | 'too_small' | 'too_big',
+    message: string
+  ): never {
+    throw new ValidationError([{ path, code, message }]);
+  }
 }

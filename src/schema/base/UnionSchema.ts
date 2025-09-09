@@ -3,45 +3,48 @@ import type { Path } from '../core/type';
 import { MaybePromise, isPromise } from '../core/utils';
 import { ValidationError } from '../core/error';
 
+type InferUnion<T extends readonly BaseSchema<any>[]> = T[number]['_type'];
+
 /**
- * UnionSchema
- * @description
- * Validates a value against multiple schemas (union type).
- * Returns the first successful parse result, or throws aggregated errors if all fail.
- * Supports both synchronous and asynchronous parsing.
+ * UnionSchema<T>
+ * - candidates 중 하나라도 통과하면 성공.
+ * - 모두 실패하면 에러를 합쳐서 던짐.
+ * - 동기/비동기 파싱 모두 지원.
  */
-export class UnionSchema<T extends readonly BaseSchema<any>[]> extends BaseSchema<
-  T[number]['_type']
-> {
-  constructor(private readonly options: T) {
+export class UnionSchema<T extends readonly BaseSchema<any>[]> extends BaseSchema<InferUnion<T>> {
+  constructor(private readonly candidates: T) {
     super();
   }
-  protected _parse(v: unknown, path: Path): MaybePromise<T[number]['_type']> {
-    const agg = new ValidationError();
-    for (const opt of this.options) {
+
+  protected _parse(input: unknown, path: Path): MaybePromise<InferUnion<T>> {
+    const aggregate = new ValidationError();
+    const pending: Promise<InferUnion<T>>[] = [];
+
+    for (const schema of this.candidates) {
       try {
-        const res = opt['_parse'](v, path);
-        if (isPromise(res)) return this._parseAsync(v, path, agg);
-        return res;
+        const result = this._callInnerParse(schema, input, path);
+
+        // 비동기 후보는 나중에 한꺼번에 처리
+        // 동기 성공 → 즉시 반환
+        if (isPromise(result)) pending.push(result);
+        else return result;
       } catch (e) {
-        agg.merge(e);
+        // 동기 실패 → 에러 합치기
+        aggregate.merge(e);
       }
     }
-    throw agg;
-  }
-  private async _parseAsync(
-    v: unknown,
-    path: Path,
-    initialErrors: ValidationError
-  ): Promise<T[number]['_type']> {
-    const agg = initialErrors;
-    for (const opt of this.options) {
-      try {
-        return await opt['_parse'](v, path);
-      } catch (e) {
-        agg.merge(e);
+
+    // 동기만 있었고 모두 실패
+    if (pending.length === 0) throw aggregate;
+
+    // 비동기 후보가 하나 이상: 첫 성공을 선택, 전부 실패면 합쳐 던짐
+    return Promise.allSettled(pending).then((settled) => {
+      for (const item of settled) {
+        if (item.status === 'fulfilled') return item.value as InferUnion<T>;
+
+        aggregate.merge(item.reason);
       }
-    }
-    throw agg;
+      throw aggregate;
+    });
   }
 }

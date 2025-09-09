@@ -3,43 +3,54 @@ import type { Path } from '../core/type';
 import { MaybePromise, ERROR_SENTINEL, isPromise, pushPath } from '../core/utils';
 import { ValidationError } from '../core/error';
 
+/**
+ * ArraySchema<T>
+ * - 배열 자체를 검증하고, 각 요소는 inner 스키마로 검증한다.
+ */
 export class ArraySchema<T> extends BaseSchema<T[]> {
   constructor(private readonly inner: BaseSchema<T>) {
     super();
   }
 
-  protected _parse(v: unknown, path: Path): MaybePromise<T[]> {
-    if (!Array.isArray(v)) {
+  protected _parse(input: unknown, path: Path): MaybePromise<T[]> {
+    // 1) 배열 타입 확인
+    if (!Array.isArray(input)) {
       throw new ValidationError([{ path, code: 'invalid_array', message: 'Expected array' }]);
     }
 
-    const agg = new ValidationError();
-    const results: MaybePromise<T | typeof ERROR_SENTINEL>[] = v.map((item, i) => {
-      try {
-        const res = this.inner['_parse'](item, pushPath(path, i));
-        if (isPromise(res)) {
-          return res.catch((e) => {
-            agg.merge(e);
-            return ERROR_SENTINEL;
-          });
-        }
-        return res;
-      } catch (e) {
-        agg.merge(e);
-        return ERROR_SENTINEL;
-      }
-    });
+    // 2) 요소 검증: 에러는 aggregate에 모으고, 실패 요소는 ERROR_SENTINEL로 마킹
+    const aggregate = new ValidationError();
 
-    const hasPromise = results.some(isPromise);
-
-    const processResults = (final: (T | typeof ERROR_SENTINEL)[]) => {
-      if (agg.hasIssues) throw agg;
-      return final.filter((r): r is T => r !== ERROR_SENTINEL);
+    const handleItemError = (e: unknown): typeof ERROR_SENTINEL => {
+      aggregate.merge(e);
+      return ERROR_SENTINEL;
     };
 
-    if (hasPromise) {
-      return Promise.all(results).then(processResults);
+    type ItemResult = MaybePromise<T | typeof ERROR_SENTINEL>;
+
+    const parseItem = (item: unknown, idx: number): ItemResult => {
+      const itemPath = pushPath(path, idx);
+      try {
+        const parsed = this._callInnerParse(this.inner, item, itemPath);
+        return isPromise(parsed) ? parsed.catch(handleItemError) : parsed;
+      } catch (e) {
+        return handleItemError(e);
+      }
+    };
+
+    const results: ItemResult[] = input.map(parseItem);
+    const hasAsync = results.some(isPromise);
+
+    /** 모든 요소 결과에서 유효한 값만 추출하고, 에러가 있으면 던진다. */
+    const unwrapValidOrThrow = (vals: (T | typeof ERROR_SENTINEL)[]) => {
+      if (aggregate.hasIssues) throw aggregate;
+      return vals.filter((x): x is T => x !== ERROR_SENTINEL);
+    };
+
+    // 3) 동기/비동기 결과 마무리
+    if (!hasAsync) {
+      return unwrapValidOrThrow(results as (T | typeof ERROR_SENTINEL)[]);
     }
-    return processResults(results as (T | typeof ERROR_SENTINEL)[]);
+    return Promise.all(results).then(unwrapValidOrThrow);
   }
 }
