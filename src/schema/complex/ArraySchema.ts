@@ -3,43 +3,54 @@ import type { Path } from '../core/type';
 import { MaybePromise, ERROR_SENTINEL, isPromise, pushPath } from '../core/utils';
 import { ValidationError } from '../core/error';
 
+/**
+ * ArraySchema<T>
+ * - Validates the array itself, and each element is validated with the inner schema.
+ */
 export class ArraySchema<T> extends BaseSchema<T[]> {
   constructor(private readonly inner: BaseSchema<T>) {
     super();
   }
 
-  protected _parse(v: unknown, path: Path): MaybePromise<T[]> {
-    if (!Array.isArray(v)) {
+  protected _parse(input: unknown, path: Path): MaybePromise<T[]> {
+    // 1) Check if the input is an array
+    if (!Array.isArray(input)) {
       throw new ValidationError([{ path, code: 'invalid_array', message: 'Expected array' }]);
     }
 
-    const agg = new ValidationError();
-    const results: MaybePromise<T | typeof ERROR_SENTINEL>[] = v.map((item, i) => {
-      try {
-        const res = this.inner['_parse'](item, pushPath(path, i));
-        if (isPromise(res)) {
-          return res.catch((e) => {
-            agg.merge(e);
-            return ERROR_SENTINEL;
-          });
-        }
-        return res;
-      } catch (e) {
-        agg.merge(e);
-        return ERROR_SENTINEL;
-      }
-    });
+    // 2) Validate each element: collect errors in aggregate, mark failed elements with ERROR_SENTINEL
+    const aggregate = new ValidationError();
 
-    const hasPromise = results.some(isPromise);
-
-    const processResults = (final: (T | typeof ERROR_SENTINEL)[]) => {
-      if (agg.hasIssues) throw agg;
-      return final.filter((r): r is T => r !== ERROR_SENTINEL);
+    const handleItemError = (e: unknown): typeof ERROR_SENTINEL => {
+      aggregate.merge(e);
+      return ERROR_SENTINEL;
     };
 
-    if (hasPromise) {
-      return Promise.all(results).then(processResults);
+    type ItemResult = MaybePromise<T | typeof ERROR_SENTINEL>;
+
+    const parseItem = (item: unknown, idx: number): ItemResult => {
+      const itemPath = pushPath(path, idx);
+      try {
+        const parsed = this._callInnerParse(this.inner, item, itemPath);
+        return isPromise(parsed) ? parsed.catch(handleItemError) : parsed;
+      } catch (e) {
+        return handleItemError(e);
+      }
+    };
+
+    const results: ItemResult[] = input.map(parseItem);
+    const hasAsync = results.some(isPromise);
+
+    /** Extract only valid values from all element results, throw if there are errors. */
+    const unwrapValidOrThrow = (vals: (T | typeof ERROR_SENTINEL)[]) => {
+      if (aggregate.hasIssues) throw aggregate;
+      return vals.filter((x): x is T => x !== ERROR_SENTINEL);
+    };
+
+    // 3) Finalize synchronous/asynchronous results
+    if (!hasAsync) {
+      return unwrapValidOrThrow(results as (T | typeof ERROR_SENTINEL)[]);
     }
-    return processResults(results as (T | typeof ERROR_SENTINEL)[]);
+    return Promise.all(results).then(unwrapValidOrThrow);
   }
 }

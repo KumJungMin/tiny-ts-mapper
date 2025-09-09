@@ -2,37 +2,52 @@ import { BaseSchema } from '../base/BaseSchema';
 import type { Path } from '../core/type';
 import { ValidationError } from '../core/error';
 
-type NumberConfig = { int?: boolean; min?: number; max?: number };
+type NumberConfig = Readonly<{ int?: boolean; min?: number; max?: number }>;
 
+/**
+ * NumberSchema
+ * - Schema that validates if the input is a number.
+ * - int() chain: allows only integers.
+ * - min(n), max(n) chains: restrict the range.
+ * - NaN is not allowed, but Infinity and -Infinity are allowed.
+ */
 export class NumberSchema extends BaseSchema<number> {
   constructor(private readonly config: NumberConfig = {}) {
     super();
   }
-  protected _parse(v: unknown, path: Path): number {
-    const isNotNumber = typeof v !== 'number' || Number.isNaN(v);
-    if (isNotNumber) {
-      throw new ValidationError([{ path, code: 'invalid_type', message: `Expected number` }]);
+
+  protected override _parse(input: unknown, path: Path): number {
+    // Reject NaN as well
+    if (typeof input !== 'number' || Number.isNaN(input)) {
+      this._fail(path, 'invalid_type', 'Expected number');
     }
-    const isInvalidInteger = this.config.int && !Number.isInteger(v);
-    if (isInvalidInteger) {
-      throw new ValidationError([{ path, code: 'invalid_type', message: `Expected integer` }]);
+
+    const { int, min, max } = this.config;
+
+    if (int && !Number.isInteger(input)) {
+      this._fail(path, 'invalid_type', 'Expected integer');
     }
-    const isTooSmall = this.config.min != null && v < this.config.min;
-    if (isTooSmall) {
-      throw new ValidationError([
-        { path, code: 'too_small', message: `Min value ${this.config.min}` },
-      ]);
+    if (min != null && input < min) {
+      this._fail(path, 'too_small', `Min value ${min}`);
     }
-    const isTooBig = this.config.max != null && v > this.config.max;
-    if (isTooBig) {
-      throw new ValidationError([
-        { path, code: 'too_big', message: `Max value ${this.config.max}` },
-      ]);
+    if (max != null && input > max) {
+      this._fail(path, 'too_big', `Max value ${max}`);
     }
-    return v;
+
+    return input;
   }
 
+  // ── Chaining methods ───────────────────────────────────────────────────────────────
   int = () => new NumberSchema({ ...this.config, int: true });
   min = (n: number) => new NumberSchema({ ...this.config, min: n });
   max = (n: number) => new NumberSchema({ ...this.config, max: n });
+
+  // ── Helper ────────────────────────────────────────────────────────────────
+  private _fail(
+    path: Path,
+    code: 'invalid_type' | 'too_small' | 'too_big',
+    message: string
+  ): never {
+    throw new ValidationError([{ path, code, message }]);
+  }
 }
