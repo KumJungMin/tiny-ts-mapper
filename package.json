@@ -14,12 +14,18 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
-    "format": "prettier -w \"src/**/*.{ts,tsx}\""
+    "format": "prettier -w \"src/**/*.{ts,tsx}\"",
+    "benchmark": "tsx ./src/demo/benchmark.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
   }
 }
